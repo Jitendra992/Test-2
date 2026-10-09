@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.base.json",
+  "include": ["./**/*.ts", "../api/**/*.ts", "../shared/**/*.ts"],
+  "compilerOptions": {
+    "lib": ["es2022"],
+    "types": ["node"]
+  }
+}

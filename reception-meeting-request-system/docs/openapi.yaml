@@ -1,0 +1,517 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Local username/password authentication and role management
+  - name: reception
+    description: Reception requests and employee routing
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /auth/bootstrap-status:
+    get:
+      operationId: getAuthBootstrapStatus
+      tags: [auth]
+      summary: Check whether first-admin setup is available
+      responses:
+        "200":
+          description: Bootstrap availability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthBootstrapStatus"
+  /auth/bootstrap:
+    post:
+      operationId: bootstrapFirstAdmin
+      tags: [auth]
+      summary: Create the first administrator account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminBootstrapInput"
+      responses:
+        "201":
+          description: First administrator created and signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in with an authorized account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordLoginInput"
+      responses:
+        "200":
+          description: Signed-in user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [auth]
+      summary: Get the current authenticated user
+      responses:
+        "200":
+          description: Current session, or null when signed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: End the current session
+      responses:
+        "200":
+          description: Session ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthLogoutResult"
+  /auth/users:
+    get:
+      operationId: listAuthUsers
+      tags: [auth]
+      summary: List authorized accounts (Admin only)
+      responses:
+        "200":
+          description: Authorized accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUsers"
+    post:
+      operationId: createAuthUser
+      tags: [auth]
+      summary: Create an authorized account (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthUserInput"
+      responses:
+        "201":
+          description: Authorized account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+  /auth/users/{id}:
+    patch:
+      operationId: updateAuthUser
+      tags: [auth]
+      summary: Update an authorized account (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthUserUpdate"
+      responses:
+        "200":
+          description: Updated authorized account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+  /reception/snapshot:
+    get:
+      operationId: getReceptionSnapshot
+      tags: [reception]
+      summary: Load the authenticated user's reception data
+      responses:
+        "200":
+          description: Requests and employees visible to the signed-in role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceptionSnapshot"
+  /reception/migrate-local:
+    post:
+      operationId: migrateLocalReceptionData
+      tags: [reception]
+      summary: Import existing browser records once (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LocalReceptionSnapshot"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalMigrationResult"
+  /reception/requests:
+    post:
+      operationId: createMeetingRequest
+      tags: [reception]
+      summary: Create a visitor request (Receptionist only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeetingRequestInput"
+      responses:
+        "201":
+          description: Created visitor request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingRequest"
+  /reception/requests/{id}/action:
+    post:
+      operationId: respondToMeetingRequest
+      tags: [reception]
+      summary: Respond to an assigned visitor request (Employee only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeRequestAction"
+      responses:
+        "200":
+          description: Updated visitor request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingRequest"
+  /reception/requests/{id}/transfer:
+    post:
+      operationId: transferMeetingRequest
+      tags: [reception]
+      summary: Transfer an assigned visitor request (Employee only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequestInput"
+      responses:
+        "200":
+          description: Transferred visitor request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingRequest"
+  /reception/requests/{id}/status:
+    patch:
+      operationId: advanceMeetingRequest
+      tags: [reception]
+      summary: Advance reception-side visit status (Receptionist only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceptionStatusUpdate"
+      responses:
+        "200":
+          description: Updated visitor request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeetingRequest"
+  /reception/employees:
+    post:
+      operationId: createReceptionEmployee
+      tags: [reception]
+      summary: Add an employee (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Employee"
+      responses:
+        "201":
+          description: Created employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+  /reception/employees/{id}:
+    put:
+      operationId: updateReceptionEmployee
+      tags: [reception]
+      summary: Save an employee (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Employee"
+      responses:
+        "200":
+          description: Saved employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+  /reception/employees/{id}/active:
+    patch:
+      operationId: setReceptionEmployeeActive
+      tags: [reception]
+      summary: Change employee active status (Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeActiveUpdate"
+      responses:
+        "200":
+          description: Updated employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    AuthRole:
+      type: string
+      enum: [Receptionist, MD, COO, President, Employee, Admin]
+    AuthUser:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: "#/components/schemas/AuthRole" }
+        employeeId: { type: ["string", "null"] }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, email, role, employeeId, active, createdAt]
+    AuthUsers:
+      type: array
+      items: { $ref: "#/components/schemas/AuthUser" }
+    AuthSession:
+      type: object
+      properties:
+        user: { anyOf: [{ $ref: "#/components/schemas/AuthUser" }, { type: "null" }] }
+      required: [user]
+    AuthBootstrapStatus:
+      type: object
+      properties:
+        available: { type: boolean }
+        requiresToken: { type: boolean }
+      required: [available, requiresToken]
+    AdminBootstrapInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 12, writeOnly: true }
+        bootstrapToken: { type: string, writeOnly: true }
+      required: [name, email, password]
+    PasswordLoginInput:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1, writeOnly: true }
+      required: [email, password]
+    AuthUserInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 12, writeOnly: true }
+        role: { $ref: "#/components/schemas/AuthRole" }
+        employeeId: { type: ["string", "null"] }
+        active: { type: boolean }
+      required: [name, email, password, role, employeeId, active]
+    AuthUserUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 12, writeOnly: true }
+        role: { $ref: "#/components/schemas/AuthRole" }
+        employeeId: { type: ["string", "null"] }
+        active: { type: boolean }
+    AuthLogoutResult:
+      type: object
+      properties:
+        success: { type: boolean }
+      required: [success]
+    Employee:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        designation: { type: string }
+        department: { type: string }
+        loginEmail: { type: string }
+        active: { type: boolean }
+        canReceiveRequests: { type: boolean }
+        canTransferRequests: { type: boolean }
+        transferTo:
+          type: array
+          items: { type: string }
+      required: [id, name, designation, department, loginEmail, active, canReceiveRequests, canTransferRequests, transferTo]
+    MeetingRequest:
+      type: object
+      properties:
+        id: { type: string }
+        visitorName: { type: string }
+        mobileNumber: { type: string }
+        company: { type: string }
+        purpose: { type: string }
+        requestedEmployeeId: { type: string }
+        requestedEmployeeName: { type: string }
+        assignedEmployeeId: { type: string }
+        assignedEmployeeName: { type: string }
+        visitorCount: { type: integer, minimum: 1 }
+        idVehicleNumber: { type: string }
+        remarks: { type: string }
+        requestedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [Waiting, Requested, Accepted, Transferred, Declined, Called In, Meeting, Completed]
+      required: [id, visitorName, mobileNumber, company, purpose, requestedEmployeeId, requestedEmployeeName, assignedEmployeeId, assignedEmployeeName, visitorCount, idVehicleNumber, remarks, requestedAt, updatedAt, status]
+    MeetingRequestInput:
+      type: object
+      properties:
+        visitorName: { type: string, minLength: 1 }
+        mobileNumber: { type: string, minLength: 1 }
+        company: { type: string }
+        purpose: { type: string, minLength: 1 }
+        requestedEmployeeId: { type: string, minLength: 1 }
+        visitorCount: { type: integer, minimum: 1 }
+        idVehicleNumber: { type: string }
+        remarks: { type: string }
+      required: [visitorName, mobileNumber, company, purpose, requestedEmployeeId, visitorCount, idVehicleNumber, remarks]
+    ReceptionSnapshot:
+      type: object
+      properties:
+        requests:
+          type: array
+          items: { $ref: "#/components/schemas/MeetingRequest" }
+        employees:
+          type: array
+          items: { $ref: "#/components/schemas/Employee" }
+        migrationAvailable: { type: boolean }
+      required: [requests, employees, migrationAvailable]
+    LocalReceptionSnapshot:
+      type: object
+      properties:
+        requests:
+          type: array
+          items: { $ref: "#/components/schemas/MeetingRequest" }
+        employees:
+          type: array
+          items: { $ref: "#/components/schemas/Employee" }
+      required: [requests, employees]
+    LocalMigrationResult:
+      type: object
+      properties:
+        imported: { type: boolean }
+        requestCount: { type: integer }
+        employeeCount: { type: integer }
+      required: [imported, requestCount, employeeCount]
+    EmployeeRequestAction:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [call, wait, decline]
+      required: [action]
+    TransferRequestInput:
+      type: object
+      properties:
+        targetEmployeeId: { type: string, minLength: 1 }
+      required: [targetEmployeeId]
+    ReceptionStatusUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [Called In, Meeting, Completed]
+      required: [status]
+    EmployeeActiveUpdate:
+      type: object
+      properties:
+        active: { type: boolean }
+      required: [active]
+
